@@ -1,0 +1,107 @@
+<header class="top-bar">
+  <h1>MyShips</h1>
+  <div class="credits" aria-live="polite">
+    <strong>{{ game.credits() | number: '1.0-0' }} Cr</strong>
+    <span>{{ game.creditsPerSecond() | number: '1.1-1' }} Cr/s</span>
+  </div>
+</header>
+
+@if (game.offlineEarnings() > 0) {
+  <div class="banner" role="status">
+    Welcome back! Your fleet earned {{ game.offlineEarnings() | number: '1.0-0' }} Cr while you were away.
+    <button type="button" (click)="game.dismissOfflineEarnings()">OK</button>
+  </div>
+}
+
+<main>
+  <section class="panel asteroid-panel">
+    <h2>Asteroid</h2>
+    <button type="button" class="asteroid" (click)="game.clickAsteroid()" aria-label="Mine the Asteroid for Credits">
+      ☄
+    </button>
+  </section>
+
+  <section class="panel">
+    <h2>Mining Garage</h2>
+    @let ship = game.ship();
+    <div class="ship">
+      <div class="trip">
+        @if (game.canMakeTrips()) {
+          <div class="trip-bar" role="progressbar" aria-label="Trip progress" [attr.aria-valuenow]="tripPercent() | number: '1.0-0'" aria-valuemin="0" aria-valuemax="100">
+            <div class="trip-fill" [style.width.%]="tripPercent()"></div>
+          </div>
+          <small>
+            {{ game.tripPayout() | number: '1.1-1' }} Cr every {{ game.tripSeconds() | number: '1.1-1' }}s
+          </small>
+        } @else {
+          <small class="warning">This Ship needs a Hull, Engine, Reactor and at least one Mining Laser to make Trips.</small>
+        }
+      </div>
+
+      <ul class="part-list">
+        @for (slot of [ship.hull, ship.engine, ship.reactor]; track $index) {
+          <li>
+            @if (slot) {
+              <span class="part-name rarity-{{ slot.rarity }}">{{ partName(slot) }}</span>
+              <small>{{ partStats(slot) }}</small>
+              <button type="button" (click)="game.remove(slot)">Remove</button>
+            } @else {
+              <span class="empty">Empty {{ ['Hull', 'Engine', 'Reactor'][$index] }}</span>
+            }
+          </li>
+        }
+        @for (tool of ship.tools; track $index) {
+          <li>
+            @if (tool) {
+              <span class="part-name rarity-{{ tool.rarity }}">{{ partName(tool) }}</span>
+              <small>{{ partStats(tool) }}</small>
+              <button type="button" (click)="game.remove(tool)">Remove</button>
+            } @else {
+              <span class="empty">Empty Tool Slot</span>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Loot Box</h2>
+    <button type="button" class="primary" (click)="game.buyStandardBox()" [disabled]="game.credits() < boxPrice">
+      Open Standard Box ({{ boxPrice }} Cr)
+    </button>
+    @if (game.latestPart(); as part) {
+      <p class="latest" role="status">
+        You got: <span class="part-name rarity-{{ part.rarity }}">{{ partName(part) }}</span>
+        <small>{{ partStats(part) }}</small>
+      </p>
+    }
+  </section>
+
+  <section class="panel inventory-panel">
+    <h2>Inventory</h2>
+    <p class="hint">Tick 3 Parts of the same type, Rarity and size to fuse them into the next Rarity.</p>
+    <button type="button" class="primary" (click)="fuseSelection()" [disabled]="!canFuseSelection()">
+      Fuse selected ({{ selectedIds().length }}/3)
+    </button>
+
+    @if (game.inventory().length === 0) {
+      <p class="empty">No spare Parts yet. Open a Loot Box!</p>
+    } @else {
+      <ul class="part-list">
+        @for (part of game.inventory(); track part.id) {
+          <li>
+            <label>
+              <input type="checkbox" [checked]="selectedIds().includes(part.id)" (change)="toggleSelected(part)" />
+              <span class="part-name rarity-{{ part.rarity }}">{{ partName(part) }}</span>
+            </label>
+            <small>{{ partStats(part) }}</small>
+            <button type="button" (click)="fit(part)" [disabled]="!canFit(part)" [title]="fitBlockedReason(part)">
+              Fit
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</main>
